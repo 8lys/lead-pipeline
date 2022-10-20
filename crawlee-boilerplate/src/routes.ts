@@ -2,7 +2,7 @@ import { Dataset, createPlaywrightRouter } from 'crawlee';
 
 export const router = createPlaywrightRouter();
 
-router.addDefaultHandler(async ({ enqueueLinks, log }) => {
+router.addDefaultHandler(async ({ log }) => {
     log.debug(`Router: Default Handler`);
     // await enqueueLinks({
     //     globs: ['https://crawlee.dev/**'],
