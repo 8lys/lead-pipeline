@@ -2,16 +2,21 @@
 import { PlaywrightCrawler, ProxyConfiguration } from "crawlee";
 import { router } from "./routes.js";
 
-const startUrls = ["https://crawlee.dev"];
-
 const crawler = new PlaywrightCrawler({
   // proxyConfiguration: new ProxyConfiguration({ proxyUrls: ['...'] }),
   requestHandler: router,
+  launchContext: {
+    launchOptions: {
+      headless: false,
+      slowMo: 150,
+    }
+  }
 });
+
 
 await crawler.run([
   {
     url: "http://dnr.alaska.gov/ssd/recoff/search/indexmenu",
-    label: "docSearch",
+    label: "documentTypeSearch"
   },
 ]);
