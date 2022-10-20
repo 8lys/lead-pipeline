@@ -13,7 +13,6 @@ const crawler = new PlaywrightCrawler({
   }
 });
 
-
 await crawler.run([
   {
     url: "http://dnr.alaska.gov/ssd/recoff/search/indexmenu",

@@ -2,15 +2,17 @@ import { Dataset, createPlaywrightRouter } from 'crawlee';
 
 export const router = createPlaywrightRouter();
 
-// router.addDefaultHandler(async ({ enqueueLinks, log }) => {
-//     log.info(`Enqueueing new URLs`);
-//     await enqueueLinks({
-//         globs: ['https://crawlee.dev/**'],
-//         label: 'detail',
-//     });
-// });
+router.addDefaultHandler(async ({ enqueueLinks, log }) => {
+    log.debug(`Router: Default Handler`);
+    // await enqueueLinks({
+    //     globs: ['https://crawlee.dev/**'],
+    //     label: 'detail',
+    // });
+});
 
 router.addHandler('documentTypeSearch', async ({ request, page, log }) => {
+    log.info('Document Type Search initiated');
+
     const DISTRICT: string = '301';
     const DOCUMENT_TYPE: string = 'M' //'M' is the index code for Mortgage
     const SEARCH_FROM_DATE: string = new Date(Date.now() - 7776000000).toLocaleDateString();
@@ -32,15 +34,15 @@ router.addHandler('documentTypeSearch', async ({ request, page, log }) => {
     ]);
 
     // Obtain and print list of search results
-    const results: [{url: string, desc: string}] = await page.$$eval('#indexdocs table tbody tr', (records) => {
+    const results: {url: string, desc: string}[] = await page.$$eval('#indexdocs table tbody tr', (records) => {
         let result: [] = [];
         let items = document.querySelectorAll('#indexdocs table tbody tr');
         records.forEach((item) => {
             let collection = item.getElementsByTagName('td');
-            let data = Array.from(collection, (element) => {
-                return (element.firstElementChild) ? element.firstElementChild.href : element.innerText;
+            let data: (string | null)[] = Array.from(collection, (element) => {
+                return (element.firstElementChild?.hasAttribute('href')) ? element.firstElementChild.getAttribute('href') : element.innerText;
             });
-            if (data[3].includes('NTC OF DEFAULT')) {
+            if (!(null === data[3]) && !(null === data[0]) && data[3].includes('NTC OF DEFAULT')) {
                 results.push({
                     url: data[0],
                     desc: data[3]
