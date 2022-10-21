@@ -2,60 +2,52 @@ import { Dataset, createPlaywrightRouter } from 'crawlee';
 
 export const router = createPlaywrightRouter();
 
-router.addDefaultHandler(async ({ log }) => {
-    log.debug(`Router: Default Handler`);
-    // await enqueueLinks({
-    //     globs: ['https://crawlee.dev/**'],
-    //     label: 'detail',
-    // });
-});
+router.addHandler('documentTypeSearch', async ({ page, log }) => {
+    log.info('Router: Document Type Search Handler');
 
-router.addHandler('documentTypeSearch', async ({ request, page, log }) => {
-    log.info('Document Type Search initiated');
+    function formatDate(date: Date): string {
+        let month: number = date.getMonth() + 1; //js months are 0 indexed
+        let day: number = date.getDate();
+        let year: number = date.getFullYear();
+        
+        return (month < 10 ? '0' : '') + month + '/' + (day < 10 ? '0' : '') + day + '/' + year; //MM/DD/YYYY;
+    };
 
-    const DISTRICT: string = '301';
-    const DOCUMENT_TYPE: string = 'M' //'M' is the index code for Mortgage
-    const SEARCH_FROM_DATE: string = new Date(Date.now() - 7776000000).toLocaleDateString();
+    const DISTRICT: string = '301'; // 301 is the district code for Anchorage
+    const DOCUMENT_TYPE: string = 'M'; //'M' is the index code for Mortgage
+    const SEARCH_FROM_DATE: string = formatDate(new Date(Date.now() - (90 * 24 * 60 * 60 * 1000)));//Today's date minus 90 days: days * hours * minutes * seconds * milliseconds
 
-    // const submitForm = await page.evaluate(([DISTRICT, DOCUMENT_TYPE, SEARCH_FROM_DATE]) => {
-    //   document.getElementById('District').value = DISTRICT;
-    //   document.getElementById('IndexCode').value = DOCUMENT_TYPE;
-    //   document.getElementById('datepicker').value = SEARCH_FROM_DATE;
-    //   document.getElementsByName('FORM').submit();
-    // }, [DISTRICT, DOCUMENT_TYPE, SEARCH_FROM_DATE]);
+   await page.selectOption('#District', DISTRICT);
+   await page.selectOption('#IndexCode', DOCUMENT_TYPE);
+   await page.type('#datepicker', SEARCH_FROM_DATE);
 
-    await page.selectOption('#District', DISTRICT);
-    await page.selectOption('#IndexCode', DOCUMENT_TYPE);
-    await page.type('#datepicker', SEARCH_FROM_DATE);
-
-    await Promise.all([
+   await Promise.all([
         page.waitForNavigation(),
-        page.click('button[name="Document Type Search"]')
-    ]);
+        page.locator('button[name="Document Type Search"]').click(),
+        page.waitForSelector('#indexdocs')
+   ]);
 
     // Obtain and print list of search results
     const results: {url: string, desc: string}[] = await page.$$eval('#indexdocs table tbody tr', (records) => {
-        let result: [] = [];
-        let items = document.querySelectorAll('#indexdocs table tbody tr');
+        let scrapedData: {url: string, desc: string}[] = [];
         records.forEach((item) => {
             let collection = item.getElementsByTagName('td');
             let data: (string | null)[] = Array.from(collection, (element) => {
                 return (element.firstElementChild?.hasAttribute('href')) ? element.firstElementChild.getAttribute('href') : element.innerText;
             });
-            if (!(null === data[3]) && !(null === data[0]) && data[3].includes('NTC OF DEFAULT')) {
-                results.push({
+            if (!(null === data[3]) && !(null === data[0]) && data[3].includes('RECON')) {
+                scrapedData.push({
                     url: data[0],
                     desc: data[3]
                 });
             }
         });
-        return results;
+
+        return scrapedData;
     });
 
     log.info('Results:', results);
 
     // Store data in default dataset
-    await Dataset.pushData(results);
-    
-    log.info('request', request);
+    await Dataset.pushData(results);    
 });
